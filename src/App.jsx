@@ -1,177 +1,68 @@
-import { Component } from "react"
-import { GrView } from "react-icons/gr";
-import DeleteConfirmModal from "./components/deleteConfirmModal";
-import { colors} from "./constants";
-import Form from "./components/Form";
-import { toast } from "react-toastify";
-import Tabs from "./components/Tabs";
-
-
+import { Component } from "react";
+import Card from "./components/Card"
+import { IoIosSearch } from "react-icons/io";
+import { handleCallApi } from "./service";
 class App extends Component {
-  constructor() {
-    super()
-    this.state = {
-      form: {
-        id: '',
-        title: '',
-        desc: '',
-        time: '',
-        status: 'pending'
-      },
-      todos: JSON.parse(localStorage.getItem("todos")) || [],
-      isOpenForm: false,
-      selectedTab: 'all',
-      isEditing: false,
-      editingId: null,
-    }
-  }
-   filteredTodos = []
 
-  handleChange = (event) => {
-    const { id } = event.target;
-    this.setState((prevState) => ({
-      form: {
-        ...prevState.form,
-        status: id,
-      },
-    }));
+  state = {
+    city: '',
+    search: 'Ha Noi',
+    data: null,
+    error: false
+  }
+
+  handleInputChange = (e) => {
+    this.setState({ city: e.target.value });
   };
 
-  handleChangeTab = (status) => {
-    this.setState({
-      selectedTab:status
-    })
+  handleSearch = () => {
+    this.setState({search: this.state.city})
   }
-
-  handleSubmitTask = () => {
-    const { isEditing, editingId, form, todos } = this.state;
-    if (form.title.trim() === "")
-      return toast.warning("Title is required!")
-
-
-    if (isEditing) {
-      const updatedTodos = [...todos];
-      
-      const todoIndex = updatedTodos.findIndex((item) => item.id === editingId);
-      updatedTodos.splice(todoIndex, 1)
-      updatedTodos.splice(todoIndex,0,form)
-
-      this.setState({
-        todos: updatedTodos,
-        isEditing: false,
-        editingId: null,
-        form: { id: '', title: '', desc: '', time: '', status: 'pending' },
-        isOpenForm: false,
-      });
-      localStorage.setItem("todos", JSON.stringify(updatedTodos));
-      toast.success("Add task successfully!")
-    } else {
-      const newTodo = { ...form,id: Date.now() };
-
-      const updatedTodos = [...todos, newTodo];
-  
-      this.setState({
-        todos: updatedTodos,
-        form: { id: '', title: '', desc: '', time: '', status: 'pending' },
-        isOpenForm: false,
-      });
+  async componentDidUpdate(_, prevState) {
+    if (prevState.search !== this.state.search) {
+      try {
+        this.setState({ error: false });
+        const data = await handleCallApi(this.state.search);
+        this.setState({ data, city: '' });
+      } catch (error) {
+        this.setState({ error: true, data: null });
+      }
     }
-  };
-  
-  getFilteredTodos = () => {
-    const { todos, selectedTab } = this.state;
-  
-    let filtered = selectedTab === 'all'
-      ? todos
-      : todos.filter(todo => todo.status === selectedTab);
-  
-    filtered.sort((a, b) => new Date(a.time) - new Date(b.time));
-  
-    return filtered;
-  };
-  
-  handleCloseForm = () => {
-    this.setState({ isOpenForm: false, isEditing: false, editingId: null, form: { id: '', title: '', desc: '', time: '', status: 'pending' }, })
   }
-
-  componentDidUpdate(_, prevStates) {
-    const todos = this.state.todos
-    if (prevStates.todos.length !== todos.length) {
-      const message =
-        todos.length > prevStates.todos.length
-          ? "Add task successfully!"
-          : "Delete task successfully!";
   
-      toast.success(message);
-      localStorage.setItem("todos", JSON.stringify(todos));
+  async componentDidMount() {
+    try {
+      this.setState({ error: false });
+      const data = await handleCallApi(this.state.search);
+      this.setState({ data, city: '' });
+    } catch (error) {
+      this.setState({ error: true, data: null });
     }
-
   }
-
-
-  handleDelete = (id) => {
-    const todos = [...this.state.todos]
-    const newTodos = todos.filter((item) => item.id !== id)
-    this.setState({todos: newTodos})
-  }
-
-  handleUpdate = (task) => {
-    this.setState({
-      isEditing: true,
-      editingId: task.id,
-      form: task,
-      isOpenForm: true
-    })
-  }
-
+  
   render() {
-    const filteredTodos = this.getFilteredTodos()
     return (
-      <div className="w-full max-w-2xl mx-auto">
-        <div className="p-10 flex flex-col gap-5 items-center">
-          <h1 className="text-4xl font-bold text-blue-900">TODO LIST</h1>
-        </div>
-        <div className="flex justify-end mb-5">
-        <button
-            type="button"
-            className="bg-[#e2ebfa] text-[#4b8ae9] rounded-lg w-fit px-6 py-3 cursor-pointer hover:bg-blue-200 "
-            onClick={() => this.setState((pre) =>  ({isOpenForm: !pre.isOpenForm}))}
-          >
-            New task
-          </button>
-        </div>
-        <Tabs handleChangeTab={ this.handleChangeTab} selectedTab={this.state.selectedTab} />
-        <div className="flex flex-col gap-4">
-          {filteredTodos.map((item,index) => 
-            <div className="bg-[#f6f6f6] rounded-lg px-4 py-2  text-md text-slate-950 flex  gap-5 items-center" key={index}>
-              <p className="">{item.title}</p>
-              {item.time && <span className="text-sm text-slate-600">due: {item.time}</span>}
-              <div className="flex-1 flex justify-end">
-              <span className= {`${colors[item.status]} text-white rounded-lg px-3 w-[70px] justify-center py-1 text-sm flex items-center justify-cente`}>{item.status}</span>
-             </div>
-              <div className="flex gap-2  justify-end ">
-                <GrView className="text-blue-400 cursor-pointer" onClick={()=>this.handleUpdate(item)} />
-                <DeleteConfirmModal handleDelete={()=> this.handleDelete(item.id)} />
-             </div>
+      <>
+        <div className="w-screen h-screen bg-gradient-to-b from-[#2E335A] to-[#45278B] flex flex-col items-center p-10 gap-10">
+          <h1 className="text-white text-3xl font-semibold leading-[56px]">Wheather App</h1>
+          <form className="flex gap-5" onSubmit={(e)=> e.preventDefault()}>
+            <div className="relative">
+              <IoIosSearch className=" left-2 top-1/2 absolute -translate-y-1/2 text-white font-medium size-5"/>
+              <input type="text" className="w-[358px] bg-[#1C1B33] rounded-lg py-2 text-white pl-10 pr-4 outline-none" value={this.state.city}  onChange={this.handleInputChange}/>
             </div>
-          )}
-        </div>
-        {this.state.isOpenForm && (
-          <Form
-          form={this.state.form}
-          isEditing={this.state.isEditing}
-          onClose={() => this.handleCloseForm()}
-          onChangeField={(field, value) =>
-            this.setState({ form: { ...this.state.form, [field]: value } })
+            <button onClick={this.handleSearch} className="text-white bg-[#1F1D47] text-sm rounded-lg px-4 py-2 cursor-pointer">Search</button>
+        </form>
+          {
+            this.state.error ? <div>
+            <img src="https://www.1stopdesign.com/wp-content/uploads/2024/04/1_hFwwQAW45673VGKrMPE2qQ.png" alt="" className="w-[500px] rounded-lg object-cover mb-5" />
+            <p className="text-white text-center text-lg font-light">Enter a valid city name to see the weather!</p>
+            </div> : <Card data={this.state.data} />
           }
-          onChangeStatus={this.handleChange}
-          onSubmit={this.handleSubmitTask}
-        />
-
-      )}
-      </div>
+       </div>
+  
+      </>
     )
   }
 }
 
-export default App;
+export default App
